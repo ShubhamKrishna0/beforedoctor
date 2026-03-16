@@ -8,17 +8,19 @@ class SlideActionButton extends StatefulWidget {
   const SlideActionButton({
     super.key,
     required this.onSlide,
-    this.width = 220,
+    this.width,
     this.height = 68,
     this.knobSize = 56,
     this.accent = const Color(0xFF2276FF),
+    this.knobIcon,
   });
 
   final void Function(AxisDirection direction) onSlide;
-  final double width;
+  final double? width;
   final double height;
   final double knobSize;
   final Color accent;
+  final Widget? knobIcon;
 
   @override
   State<SlideActionButton> createState() => _SlideActionButtonState();
@@ -33,8 +35,11 @@ class _SlideActionButtonState extends State<SlideActionButton>
 
   double _dragX = 0;
   AxisDirection _direction = AxisDirection.right;
+  bool _hasTriggered = false;
 
-  double get _trackWidth => widget.width - widget.knobSize;
+  double _resolvedWidth = 220;
+  double get _trackWidth =>
+      math.max(0, _resolvedWidth - widget.knobSize);
 
   @override
   void dispose() {
@@ -43,8 +48,16 @@ class _SlideActionButtonState extends State<SlideActionButton>
   }
 
   void _updateDrag(DragUpdateDetails details) {
+    final nextX =
+        (_dragX + details.delta.dx).clamp(0, _trackWidth).toDouble();
+    if (!_hasTriggered && (nextX - _dragX).abs() > 6) {
+      _direction =
+          details.delta.dx >= 0 ? AxisDirection.right : AxisDirection.left;
+      _hasTriggered = true;
+      widget.onSlide(_direction);
+    }
     setState(() {
-      _dragX = (_dragX + details.delta.dx).clamp(0, _trackWidth);
+      _dragX = nextX;
     });
   }
 
@@ -56,37 +69,46 @@ class _SlideActionButtonState extends State<SlideActionButton>
       _direction = newDirection;
       _dragX = newDirection == AxisDirection.right ? _trackWidth : 0;
     });
-    widget.onSlide(_direction);
+    if (!_hasTriggered) {
+      widget.onSlide(_direction);
+    }
+    _hasTriggered = false;
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.width,
-      height: widget.height,
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          _SlideTrack(
-            accent: widget.accent,
-            direction: _direction,
-            controller: _hintController,
-          ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            left: _dragX,
-            child: GestureDetector(
-              onHorizontalDragUpdate: _updateDrag,
-              onHorizontalDragEnd: _endDrag,
-              child: _SlideKnob(
-                size: widget.knobSize,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _resolvedWidth = widget.width ?? constraints.maxWidth;
+        return SizedBox(
+          width: _resolvedWidth,
+          height: widget.height,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              _SlideTrack(
                 accent: widget.accent,
+                direction: _direction,
+                controller: _hintController,
               ),
-            ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                left: _dragX,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: _updateDrag,
+                  onHorizontalDragEnd: _endDrag,
+                  child: _SlideKnob(
+                    size: widget.knobSize,
+                    accent: widget.accent,
+                    icon: widget.knobIcon,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -216,10 +238,12 @@ class _SlideKnob extends StatelessWidget {
   const _SlideKnob({
     required this.size,
     required this.accent,
+    this.icon,
   });
 
   final double size;
   final Color accent;
+  final Widget? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -242,10 +266,13 @@ class _SlideKnob extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
-        Icons.circle,
-        color: accent.withValues(alpha: 0.75),
-        size: size * 0.35,
+      child: Center(
+        child: icon ??
+            Icon(
+              Icons.circle,
+              color: accent.withValues(alpha: 0.75),
+              size: size * 0.35,
+            ),
       ),
     );
   }

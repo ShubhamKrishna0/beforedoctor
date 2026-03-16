@@ -7,7 +7,7 @@ import 'package:beforedoctor/presentation/widgets/text_input_overlay.dart';
 import 'package:beforedoctor/presentation/widgets/transcript_editor_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:slide_to_act/slide_to_act.dart';
+import 'package:beforedoctor/shared/widgets/slide_action_button.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -131,55 +131,42 @@ class _HomeViewState extends State<_HomeView> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: SlideAction(
-                            height: 62,
-                            borderRadius: 32,
-                            outerColor: AppColors.primaryBlue,
-                            innerColor: Colors.white,
-                            text: 'Slide to talk',
-                            textStyle: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            sliderButtonIcon: const Icon(
+                          child: SlideActionButton(
+                            height: 64,
+                            knobSize: 56,
+                            accent: AppColors.primaryBlue,
+                            knobIcon: const Icon(
                               Icons.mic_none_rounded,
                               color: AppColors.primaryBlue,
                             ),
-                            onSubmit: () {
-                              context.read<ChatCubit>().startRecording();
+                            onSlide: (direction) {
+                              if (direction == AxisDirection.right) {
+                                context.read<ChatCubit>().startRecording();
+                              }
                             },
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Directionality(
-                            textDirection: TextDirection.rtl,
-                            child: SlideAction(
-                              height: 62,
-                              borderRadius: 32,
-                              outerColor: const Color(0xFF10243E),
-                              innerColor: Colors.white,
-                              text: 'Slide to type',
-                              textStyle: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              sliderButtonIcon: const Icon(
-                                Icons.chat_bubble_outline_rounded,
-                                color: Color(0xFF10243E),
-                              ),
-                              onSubmit: () async {
-                                final text =
-                                    await showTextInputOverlay(context);
-                                if (!context.mounted || text == null) {
-                                  return;
-                                }
-                                context
-                                    .read<ChatCubit>()
-                                    .clearTranscriptDraft();
-                                context.read<ChatCubit>().sendMessage(text);
-                              },
+                          child: SlideActionButton(
+                            height: 64,
+                            knobSize: 56,
+                            accent: const Color(0xFF10243E),
+                            knobIcon: const Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              color: Color(0xFF10243E),
                             ),
+                            onSlide: (direction) async {
+                              if (direction != AxisDirection.left) {
+                                return;
+                              }
+                              final text = await showTextInputOverlay(context);
+                              if (!context.mounted || text == null) {
+                                return;
+                              }
+                              context.read<ChatCubit>().clearTranscriptDraft();
+                              context.read<ChatCubit>().sendMessage(text);
+                            },
                           ),
                         ),
                       ],

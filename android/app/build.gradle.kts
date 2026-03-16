@@ -9,7 +9,7 @@ android {
     namespace = "com.example.beforedoctor"
 
     // Use latest stable compile SDK
-    compileSdk = 35
+    compileSdk = 36
 
     // REQUIRED by audio plugins
     ndkVersion = "27.0.12077973"
@@ -27,7 +27,7 @@ android {
         applicationId = "com.example.beforedoctor"
 
         // REQUIRED by record_android plugin
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
 
         targetSdk = 34
 
