@@ -21,6 +21,18 @@ class ConversationRepository:
         ).execute()
         return conversation_id
 
+    def conversation_exists_for_user(self, conversation_id: str, user_id: str) -> bool:
+        response = (
+            self.client.schema(self.schema)
+            .table("conversations")
+            .select("id")
+            .eq("id", conversation_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        return bool(response.data)
+
     def get_conversation_messages(self, conversation_id: str) -> list[dict]:
         response = (
             self.client.schema(self.schema)

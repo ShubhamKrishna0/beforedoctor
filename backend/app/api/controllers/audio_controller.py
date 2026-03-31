@@ -14,17 +14,20 @@ class AudioController:
         self.audio_service = AudioService()
         self.transcription_service = TranscriptionService()
 
+    def _resolve_conversation_id(self, user_id: str, conversation_id: str | None) -> str:
+        if conversation_id and self.conversation_repository.conversation_exists_for_user(
+            conversation_id, user_id
+        ):
+            return conversation_id
+        return self.conversation_repository.create_conversation(user_id)
+
     async def transcribe_audio(
         self,
         user_id: str,
         audio_file: UploadFile,
         conversation_id: str | None = None,
     ) -> AudioTranscriptionResponse:
-        active_conversation_id = (
-            conversation_id
-            if conversation_id
-            else self.conversation_repository.create_conversation(user_id)
-        )
+        active_conversation_id = self._resolve_conversation_id(user_id, conversation_id)
 
         audio_url = await self.audio_service.upload_user_audio(user_id, audio_file)
         await audio_file.seek(0)

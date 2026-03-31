@@ -16,16 +16,20 @@ class ChatController:
         self.tts_service = TTSService()
         self.doctor_agent = DoctorAgent()
 
+    def _resolve_conversation_id(self, user_id: str, conversation_id: str | None) -> str:
+        if conversation_id and self.conversation_repository.conversation_exists_for_user(
+            conversation_id, user_id
+        ):
+            return conversation_id
+        return self.conversation_repository.create_conversation(user_id)
+
     async def send_message(
         self,
         user_id: str,
         payload: ChatMessageRequest,
     ) -> ChatMessageResponse:
-        conversation_id = (
-            payload.conversation_id
-            if payload.conversation_id
-            else self.conversation_repository.create_conversation(user_id)
-        )
+        conversation_id = self._resolve_conversation_id(user_id, payload.conversation_id)
+
         user_message_id = self.message_repository.create_message(
             conversation_id=conversation_id,
             role="user",
