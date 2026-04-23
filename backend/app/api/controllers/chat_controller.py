@@ -1,3 +1,5 @@
+import asyncio
+
 from app.agents.doctor_agent.doctor_agent import DoctorAgent
 from app.core.config.settings import get_settings
 from app.repositories.conversation_repository import ConversationRepository
@@ -39,19 +41,26 @@ class ChatController:
         doctor_response = await self.doctor_agent.generate_response(payload.text)
         audio_response_url = None
         if payload.generate_audio and self.settings.enable_tts:
-            tts_audio = await self.tts_service.synthesize(
-                "\n".join(
-                    [
-                        doctor_response["summary_of_symptoms"],
-                        *doctor_response["immediate_advice"],
-                        doctor_response["medical_disclaimer"],
-                    ]
+            try:
+                tts_audio = await asyncio.wait_for(
+                    self.tts_service.synthesize(
+                        "\n".join(
+                            [
+                                doctor_response["summary_of_symptoms"],
+                                *doctor_response["immediate_advice"],
+                                doctor_response["medical_disclaimer"],
+                            ]
+                        )
+                    ),
+                    timeout=self.settings.tts_timeout_seconds,
                 )
-            )
-            audio_response_url = self.audio_service.upload_generated_audio(
-                user_id,
-                tts_audio,
-            )
+                audio_response_url = await asyncio.to_thread(
+                    self.audio_service.upload_generated_audio,
+                    user_id,
+                    tts_audio,
+                )
+            except Exception:
+                audio_response_url = None
 
         ai_message_id = self.message_repository.create_message(
             conversation_id=conversation_id,

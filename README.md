@@ -159,6 +159,14 @@ backend/
 - Database and storage: Supabase
 - Frontend: Flutter Android and iOS builds
 
+Recommended production tuning for faster Render responses:
+
+- `OPENAI_DOCTOR_MODEL=gpt-4.1-mini`
+- `OPENAI_DOCTOR_FALLBACK_MODEL=gpt-4.1-mini`
+- `OPENAI_DOCTOR_TIMEOUT_SECONDS=25`
+- `ENABLE_TTS=true` only if you need server-generated MP3s immediately
+- `TTS_TIMEOUT_SECONDS=8` so TTS failure does not block text responses
+
 ## OpenAI Models
 
 - Speech-to-text: `gpt-4o-transcribe`

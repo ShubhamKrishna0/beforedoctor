@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from app.agents.doctor_agent.doctor_prompt import build_doctor_system_prompt
@@ -30,24 +31,42 @@ class DoctorAgent:
             "additionalProperties": False,
         }
 
-        response = await client.responses.create(
-            model=settings.openai_doctor_model,
-            input=[
-                {"role": "system", "content": build_doctor_system_prompt()},
-                {
-                    "role": "developer",
-                    "content": "Medical safety rules:\n- " + "\n- ".join(SAFETY_RULES),
-                },
-                {"role": "user", "content": symptom_text},
-            ],
-            text={
-                "format": {
-                    "type": "json_schema",
-                    "name": "doctor_response",
-                    "schema": schema,
-                    "strict": True,
-                }
+        request_input = [
+            {"role": "system", "content": build_doctor_system_prompt()},
+            {
+                "role": "developer",
+                "content": "Medical safety rules:\n- " + "\n- ".join(SAFETY_RULES),
             },
-        )
+            {"role": "user", "content": symptom_text},
+        ]
+        request_text = {
+            "format": {
+                "type": "json_schema",
+                "name": "doctor_response",
+                "schema": schema,
+                "strict": True,
+            }
+        }
+
+        async def _create_response(model: str):
+            return await asyncio.wait_for(
+                client.responses.create(
+                    model=model,
+                    input=request_input,
+                    text=request_text,
+                ),
+                timeout=settings.openai_doctor_timeout_seconds,
+            )
+
+        try:
+            response = await _create_response(settings.openai_doctor_model)
+        except Exception:
+            fallback_model = settings.openai_doctor_fallback_model.strip()
+            if (
+                not fallback_model
+                or fallback_model == settings.openai_doctor_model.strip()
+            ):
+                raise
+            response = await _create_response(fallback_model)
 
         return normalize_doctor_response(json.loads(response.output_text))

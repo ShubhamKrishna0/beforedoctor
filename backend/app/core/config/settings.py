@@ -19,7 +19,15 @@ class Settings(BaseSettings):
         alias="OPENAI_TRANSCRIBE_MODEL",
     )
     openai_doctor_model: str = Field(
-        default="gpt-4.1", alias="OPENAI_DOCTOR_MODEL")
+        default="gpt-4.1-mini", alias="OPENAI_DOCTOR_MODEL")
+    openai_doctor_fallback_model: str = Field(
+        default="gpt-4.1-mini",
+        alias="OPENAI_DOCTOR_FALLBACK_MODEL",
+    )
+    openai_doctor_timeout_seconds: float = Field(
+        default=25.0,
+        alias="OPENAI_DOCTOR_TIMEOUT_SECONDS",
+    )
     openai_tts_model: str = Field(
         default="gpt-4o-mini-tts", alias="OPENAI_TTS_MODEL")
     openai_tts_voice: str = Field(default="alloy", alias="OPENAI_TTS_VOICE")
@@ -35,6 +43,7 @@ class Settings(BaseSettings):
 
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
     enable_tts: bool = Field(default=True, alias="ENABLE_TTS")
+    tts_timeout_seconds: float = Field(default=8.0, alias="TTS_TIMEOUT_SECONDS")
     enable_background_queue: bool = Field(
         default=False, alias="ENABLE_BACKGROUND_QUEUE")
     redis_url: str = Field(
