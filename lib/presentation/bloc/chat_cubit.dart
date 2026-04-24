@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:beforedoctor/core/network/api_client.dart';
 import 'package:beforedoctor/features/audio/data/repositories/audio_repository.dart';
 import 'package:beforedoctor/features/chat/domain/entities/chat_message.dart';
+import 'package:beforedoctor/features/chat/domain/entities/conversation_phase.dart';
 import 'package:beforedoctor/features/chat/data/repositories/chat_repository.dart';
 import 'package:beforedoctor/presentation/bloc/chat_state.dart';
 import 'package:dio/dio.dart';
@@ -56,18 +57,46 @@ class ChatCubit extends Cubit<ChatState> {
       ),
     );
     try {
-      final response = await _chatRepository.sendMessage(message);
-      final aiMessage = ChatMessage(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        role: 'assistant',
-        text: response.summaryOfSymptoms,
-        timestamp: DateTime.now(),
-        response: response,
+      final result = await _chatRepository.sendMessage(
+        message,
+        conversationId: state.conversationId,
       );
+
+      final phase = ConversationPhase.fromString(result.phase);
+
+      final ChatMessage aiMessage;
+      if (phase == ConversationPhase.gathering && result.questions != null) {
+        aiMessage = ChatMessage(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          role: 'assistant',
+          text: result.questions!.join('\n'),
+          timestamp: DateTime.now(),
+          questions: result.questions,
+          phase: result.phase,
+          isUrgent: result.isUrgent,
+          smartAlerts: result.smartAlerts,
+        );
+      } else {
+        aiMessage = ChatMessage(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          role: 'assistant',
+          text: result.response?.summaryOfSymptoms ?? '',
+          timestamp: DateTime.now(),
+          response: result.response,
+          phase: result.phase,
+          isUrgent: result.isUrgent,
+          smartAlerts: result.smartAlerts,
+        );
+      }
+
       emit(
         state.copyWith(
           loading: false,
-          latestResponse: response,
+          conversationId: result.conversationId,
+          conversationPhase: phase,
+          latestResponse: result.response,
+          isUrgent: result.isUrgent,
+          smartAlerts: result.smartAlerts,
           messages: [...state.messages, aiMessage],
         ),
       );

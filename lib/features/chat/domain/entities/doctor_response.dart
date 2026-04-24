@@ -9,6 +9,7 @@ class DoctorResponse {
     required this.medicalDisclaimer,
     required this.followUpQuestions,
     this.audioResponseUrl,
+    this.conversationSummary,
   });
 
   final String summaryOfSymptoms;
@@ -20,4 +21,5 @@ class DoctorResponse {
   final String medicalDisclaimer;
   final List<String> followUpQuestions;
   final String? audioResponseUrl;
+  final String? conversationSummary;
 }

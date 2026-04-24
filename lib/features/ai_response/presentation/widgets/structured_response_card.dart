@@ -19,6 +19,13 @@ class StructuredResponseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (response.conversationSummary != null &&
+                response.conversationSummary!.isNotEmpty)
+              _Section(
+                title: 'Conversation Summary',
+                content: response.conversationSummary!,
+                accent: AppColors.primaryBlue,
+              ),
             _Section(title: 'Summary of Symptoms', content: response.summaryOfSymptoms),
             _BulletSection(title: 'Possible Causes', items: response.possibleCauses),
             _BulletSection(title: 'Immediate Advice', items: response.immediateAdvice),

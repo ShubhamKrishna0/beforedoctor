@@ -17,11 +17,16 @@ class DoctorResponsePayload(BaseModel):
     when_to_see_a_real_doctor: str
     medical_disclaimer: str
     follow_up_questions: list[str]
+    conversation_summary: str | None = None
 
 
 class ChatMessageResponse(BaseModel):
     conversation_id: str
     user_message_id: str
     ai_message_id: str
-    response: DoctorResponsePayload
+    phase: str = "responding"  # "gathering" | "responding" | "follow_up"
+    questions: list[str] | None = None
+    response: DoctorResponsePayload | None = None
     audio_response_url: str | None = None
+    is_urgent: bool = False
+    smart_alerts: list[str] = []

@@ -33,6 +33,31 @@ class ConversationRepository:
         )
         return bool(response.data)
 
+    def get_conversation_phase(self, conversation_id: str) -> str:
+        """Return the current phase for a conversation, defaulting to 'gathering'."""
+        response = (
+            self.client.schema(self.schema)
+            .table("conversations")
+            .select("phase")
+            .eq("id", conversation_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if rows and rows[0].get("phase"):
+            return rows[0]["phase"]
+        return "gathering"
+
+    def update_conversation_phase(self, conversation_id: str, phase: str) -> None:
+        """Update the phase column on a conversation row."""
+        (
+            self.client.schema(self.schema)
+            .table("conversations")
+            .update({"phase": phase})
+            .eq("id", conversation_id)
+            .execute()
+        )
+
     def get_conversation_messages(self, conversation_id: str) -> list[dict]:
         response = (
             self.client.schema(self.schema)

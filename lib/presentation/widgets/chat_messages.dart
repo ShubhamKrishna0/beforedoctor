@@ -1,4 +1,9 @@
+import 'package:beforedoctor/core/network/api_client.dart';
+import 'package:beforedoctor/features/ai_response/presentation/widgets/clarifying_questions_card.dart';
+import 'package:beforedoctor/features/ai_response/presentation/widgets/feedback_buttons.dart';
+import 'package:beforedoctor/features/ai_response/presentation/widgets/smart_alert_banner.dart';
 import 'package:beforedoctor/features/ai_response/presentation/widgets/structured_response_card.dart';
+import 'package:beforedoctor/features/ai_response/presentation/widgets/urgent_alert_banner.dart';
 import 'package:beforedoctor/features/chat/domain/entities/chat_message.dart';
 import 'package:beforedoctor/presentation/bloc/chat_state.dart';
 import 'package:flutter/material.dart';
@@ -10,10 +15,12 @@ class ChatMessages extends StatefulWidget {
     super.key,
     required this.state,
     this.bottomPadding = 24,
+    this.apiClient,
   });
 
   final ChatState state;
   final double bottomPadding;
+  final ApiClient? apiClient;
 
   @override
   State<ChatMessages> createState() => _ChatMessagesState();
@@ -52,7 +59,10 @@ class _ChatMessagesState extends State<ChatMessages> {
           if (entry is _DateHeader)
             _DateDivider(label: entry.label)
           else if (entry is ChatMessage)
-            _MessageBubble(message: entry),
+            _MessageBubble(
+              message: entry,
+              apiClient: widget.apiClient,
+            ),
         if (widget.state.error != null)
           Padding(
             padding: const EdgeInsets.only(top: 16),
@@ -124,9 +134,13 @@ class _DateDivider extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({
+    required this.message,
+    this.apiClient,
+  });
 
   final ChatMessage message;
+  final ApiClient? apiClient;
 
   @override
   Widget build(BuildContext context) {
@@ -140,12 +154,38 @@ class _MessageBubble extends StatelessWidget {
           crossAxisAlignment:
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (message.response != null)
+            if (message.isUrgent) ...[
+              const SizedBox(width: 320, child: UrgentAlertBanner()),
+              const SizedBox(height: 8),
+            ],
+            if (message.smartAlerts.isNotEmpty) ...[
+              SizedBox(
+                width: 320,
+                child: SmartAlertBanner(alerts: message.smartAlerts),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (message.phase == 'gathering' &&
+                message.questions != null &&
+                message.questions!.isNotEmpty)
+              SizedBox(
+                width: 320,
+                child: ClarifyingQuestionsCard(questions: message.questions!),
+              )
+            else if (message.response != null) ...[
               SizedBox(
                 width: 320,
                 child: StructuredResponseCard(response: message.response!),
-              )
-            else
+              ),
+              if (apiClient != null)
+                SizedBox(
+                  width: 320,
+                  child: FeedbackButtons(
+                    aiResponseId: message.id,
+                    apiClient: apiClient!,
+                  ),
+                ),
+            ] else
               Container(
                 constraints: const BoxConstraints(maxWidth: 280),
                 padding: const EdgeInsets.all(14),

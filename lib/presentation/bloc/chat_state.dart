@@ -1,4 +1,5 @@
 import 'package:beforedoctor/features/chat/domain/entities/chat_message.dart';
+import 'package:beforedoctor/features/chat/domain/entities/conversation_phase.dart';
 import 'package:beforedoctor/features/chat/domain/entities/doctor_response.dart';
 import 'package:equatable/equatable.dart';
 
@@ -14,6 +15,10 @@ class ChatState extends Equatable {
     this.lastUserMessage,
     this.error,
     this.messages = const [],
+    this.conversationId,
+    this.conversationPhase = ConversationPhase.gathering,
+    this.smartAlerts = const [],
+    this.isUrgent = false,
   });
 
   final bool loading;
@@ -26,6 +31,10 @@ class ChatState extends Equatable {
   final String? lastUserMessage;
   final String? error;
   final List<ChatMessage> messages;
+  final String? conversationId;
+  final ConversationPhase conversationPhase;
+  final List<String> smartAlerts;
+  final bool isUrgent;
 
   ChatState copyWith({
     bool? loading,
@@ -38,6 +47,10 @@ class ChatState extends Equatable {
     String? lastUserMessage,
     String? error,
     List<ChatMessage>? messages,
+    String? conversationId,
+    ConversationPhase? conversationPhase,
+    List<String>? smartAlerts,
+    bool? isUrgent,
   }) {
     return ChatState(
       loading: loading ?? this.loading,
@@ -50,6 +63,10 @@ class ChatState extends Equatable {
       lastUserMessage: lastUserMessage ?? this.lastUserMessage,
       error: error,
       messages: messages ?? this.messages,
+      conversationId: conversationId ?? this.conversationId,
+      conversationPhase: conversationPhase ?? this.conversationPhase,
+      smartAlerts: smartAlerts ?? this.smartAlerts,
+      isUrgent: isUrgent ?? this.isUrgent,
     );
   }
 
@@ -65,5 +82,9 @@ class ChatState extends Equatable {
         lastUserMessage,
         error,
         messages,
+        conversationId,
+        conversationPhase,
+        smartAlerts,
+        isUrgent,
       ];
 }

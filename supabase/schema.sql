@@ -12,6 +12,7 @@ create table if not exists before_doctor.users (
 create table if not exists before_doctor.conversations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references before_doctor.users(id) on delete cascade,
+  phase text not null default 'gathering' check (phase in ('gathering', 'responding', 'follow_up')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -49,6 +50,43 @@ create table if not exists before_doctor.audio_files (
   created_at timestamptz not null default now()
 );
 
+create table if not exists before_doctor.question_bank (
+  id uuid primary key default gen_random_uuid(),
+  symptom text not null,
+  question text not null,
+  priority integer not null,
+  conditions_to_ask jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists before_doctor.user_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references before_doctor.users(id) on delete cascade,
+  profile_data jsonb not null default '{}',
+  updated_at timestamptz not null default now(),
+  unique(user_id)
+);
+
+create table if not exists before_doctor.user_medical_memory (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references before_doctor.users(id) on delete cascade,
+  fact_type text not null,
+  fact_value text not null,
+  source_conversation_id uuid references before_doctor.conversations(id),
+  created_at timestamptz not null default now(),
+  is_active boolean not null default true
+);
+
+create table if not exists before_doctor.response_feedback (
+  id uuid primary key default gen_random_uuid(),
+  ai_response_id uuid not null references before_doctor.ai_responses(id) on delete cascade,
+  user_id uuid not null references before_doctor.users(id) on delete cascade,
+  rating integer not null check (rating in (1, -1)),
+  comment text,
+  created_at timestamptz not null default now(),
+  unique(ai_response_id, user_id)
+);
+
 create index if not exists idx_before_doctor_conversations_user_id
   on before_doctor.conversations(user_id);
 
@@ -61,12 +99,22 @@ create index if not exists idx_before_doctor_transcripts_message_id
 create index if not exists idx_before_doctor_ai_responses_message_id
   on before_doctor.ai_responses(message_id);
 
+create index if not exists idx_question_bank_symptom
+  on before_doctor.question_bank(symptom);
+
+create index if not exists idx_medical_memory_user_active
+  on before_doctor.user_medical_memory(user_id) where is_active = true;
+
 alter table before_doctor.users enable row level security;
 alter table before_doctor.conversations enable row level security;
 alter table before_doctor.messages enable row level security;
 alter table before_doctor.transcripts enable row level security;
 alter table before_doctor.ai_responses enable row level security;
 alter table before_doctor.audio_files enable row level security;
+alter table before_doctor.question_bank enable row level security;
+alter table before_doctor.user_profiles enable row level security;
+alter table before_doctor.user_medical_memory enable row level security;
+alter table before_doctor.response_feedback enable row level security;
 
 create policy "users can view self"
   on before_doctor.users
@@ -139,6 +187,37 @@ create policy "users manage own ai responses"
 
 create policy "users manage own audio files"
   on before_doctor.audio_files
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "authenticated users can read question_bank"
+  on before_doctor.question_bank
+  for select
+  to authenticated
+  using (true);
+
+create policy "service role can manage question_bank"
+  on before_doctor.question_bank
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
+create policy "users manage own profile"
+  on before_doctor.user_profiles
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "users manage own medical memory"
+  on before_doctor.user_medical_memory
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "users manage own feedback"
+  on before_doctor.response_feedback
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
