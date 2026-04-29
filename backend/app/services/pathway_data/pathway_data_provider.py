@@ -37,8 +37,12 @@ logger = logging.getLogger(__name__)
 _MEDICALDIARY_SCHEMA = "medicaldiary"
 
 # Fallback: YAML config directory (used when DB is unreachable)
+# In Docker: /app/config/pathways (Dockerfile copies config/ into /app/config/)
+# In dev:    beforedoctor/config/pathways (4 parents up from this file)
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_DEFAULT_CONFIG_DIR = _PROJECT_ROOT / "config" / "pathways"
+_DOCKER_CONFIG_DIR = Path("/app/config/pathways")
+_DEV_CONFIG_DIR = _PROJECT_ROOT / "config" / "pathways"
+_DEFAULT_CONFIG_DIR = _DOCKER_CONFIG_DIR if _DOCKER_CONFIG_DIR.is_dir() else _DEV_CONFIG_DIR
 
 
 class PathwayDataProvider:
