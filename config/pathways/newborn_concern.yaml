@@ -1,0 +1,169 @@
+pathway_code: newborn_concern
+pathway_name: Newborn concern
+description: Infants under ~3 months — feeding, jaundice, fever, breathing
+priority: 8
+
+required_fields:
+  - field_code: age_days
+    field_label: Age in days
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: feeding_less_than_usual
+    field_label: Feeding less than usual or hard to wake for feeds
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: feeding
+    red_flag_relevance: true
+    display_order: 20
+
+  - field_code: wet_diapers_reduced
+    field_label: Fewer wet diapers than usual
+    data_type: boolean
+    is_required: true
+    priority_weight: 95
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 30
+
+  - field_code: jaundice_getting_worse
+    field_label: Yellowing of skin or eyes getting worse
+    data_type: boolean
+    is_required: true
+    priority_weight: 90
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 40
+
+  - field_code: fever_or_feels_hot
+    field_label: Measured fever or feels hot to touch
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 50
+
+  - field_code: breathing_difficulty
+    field_label: Fast breathing, flaring nostrils, or chest pulling in
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: vomiting_green_bile
+    field_label: Green vomit or projectile vomiting
+    data_type: boolean
+    is_required: true
+    priority_weight: 95
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: lethargy
+    field_label: Very sleepy, hard to wake, or not responding normally
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 80
+
+question_templates:
+  - question_code: ask_nb_age_days
+    field_code: age_days
+    question_text: "How many days old is your baby? If you are not sure exactly, your best estimate is fine."
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_nb_feeding
+    field_code: feeding_less_than_usual
+    question_text: "Is your baby feeding less than usual, or hard to wake for feeds?"
+    expected_answer_type: boolean
+    ask_order_hint: 20
+    group_key: feeding
+    variants: []
+
+  - question_code: ask_nb_diapers
+    field_code: wet_diapers_reduced
+    question_text: "Have wet diapers been noticeably fewer than usual?"
+    expected_answer_type: boolean
+    ask_order_hint: 30
+    group_key: hydration
+    variants: []
+
+  - question_code: ask_nb_jaundice
+    field_code: jaundice_getting_worse
+    question_text: "Is the yellow color in the skin or eyes getting worse?"
+    expected_answer_type: boolean
+    ask_order_hint: 40
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_nb_fever
+    field_code: fever_or_feels_hot
+    question_text: "Has your baby had a measured fever, or felt hot to you?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: safety
+    variants: []
+
+  - question_code: ask_nb_breathing
+    field_code: breathing_difficulty
+    question_text: "Any fast breathing, nostrils flaring, or ribs pulling in with breaths?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: safety
+    variants: []
+
+  - question_code: ask_nb_vomit
+    field_code: vomiting_green_bile
+    question_text: "Any green vomit, or forceful projectile vomiting?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_nb_lethargy
+    field_code: lethargy
+    question_text: "Is your baby unusually sleepy, hard to wake, or not responding like usual?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: safety
+    variants: []
+
+red_flag_rules:
+  - rule_code: newborn_fever
+    description: Fever or feels hot in young infant
+    logic_json:
+      all:
+        - field: age_days
+          op: lt
+          value: 90
+        - field: fever_or_feels_hot
+          op: eq
+          value: true
+    urgency_level: emergency
+    message: "Fever in a young baby is an emergency. Seek emergency medical care now."
+
+  - rule_code: newborn_poor_feeding_dehydration
+    description: Reduced feeding and fewer wet diapers
+    logic_json:
+      all:
+        - field: feeding_less_than_usual
+          op: eq
+          value: true
+        - field: wet_diapers_reduced
+          op: eq
+          value: true
+    urgency_level: urgent
+    message: "Poor feeding with fewer wet diapers in a newborn needs urgent medical assessment today."

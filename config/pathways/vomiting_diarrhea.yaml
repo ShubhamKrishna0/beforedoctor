@@ -1,0 +1,187 @@
+pathway_code: vomiting_diarrhea
+pathway_name: Vomiting / Diarrhea / GI
+description: GI symptom intake
+priority: 30
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When symptoms started
+    data_type: datetime
+    is_required: true
+    priority_weight: 85
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: vomiting_count
+    field_label: Vomiting count
+    data_type: integer
+    is_required: false
+    priority_weight: 80
+    ask_group: vomiting
+    red_flag_relevance: false
+    display_order: 30
+
+  - field_code: diarrhea_count
+    field_label: Diarrhea count
+    data_type: integer
+    is_required: false
+    priority_weight: 80
+    ask_group: diarrhea
+    red_flag_relevance: false
+    display_order: 40
+
+  - field_code: keeps_fluids_down
+    field_label: Able to keep fluids down
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 50
+
+  - field_code: urine_output
+    field_label: Urine output status
+    data_type: single_select
+    is_required: true
+    priority_weight: 95
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: fever_present
+    field_label: Fever present
+    data_type: boolean
+    is_required: true
+    priority_weight: 70
+    ask_group: context
+    red_flag_relevance: false
+    display_order: 70
+
+  - field_code: abdominal_pain
+    field_label: Abdominal pain present
+    data_type: boolean
+    is_required: false
+    priority_weight: 70
+    ask_group: pain
+    red_flag_relevance: true
+    display_order: 80
+
+  - field_code: blood_in_stool_or_vomit
+    field_label: Blood in stool or vomit
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 90
+
+  - field_code: dehydration_signs
+    field_label: Signs of dehydration
+    data_type: multi_select
+    is_required: false
+    priority_weight: 95
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_gi
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_gi_onset
+    field_code: onset_time
+    question_text: "When did the vomiting or diarrhea start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_vomiting_count
+    field_code: vomiting_count
+    question_text: "How many times has your child vomited?"
+    expected_answer_type: integer
+    ask_order_hint: 30
+    group_key: vomiting
+    variants: []
+
+  - question_code: ask_diarrhea_count
+    field_code: diarrhea_count
+    question_text: "How many loose stools or diarrhea episodes have there been?"
+    expected_answer_type: integer
+    ask_order_hint: 40
+    group_key: diarrhea
+    variants: []
+
+  - question_code: ask_keep_fluids
+    field_code: keeps_fluids_down
+    question_text: "Can your child keep fluids down?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: hydration
+    variants: []
+
+  - question_code: ask_gi_urine
+    field_code: urine_output
+    question_text: "Are they peeing normally, less often, or much less than usual?"
+    expected_answer_type: single_select
+    ask_order_hint: 60
+    group_key: hydration
+    variants: []
+
+  - question_code: ask_gi_fever
+    field_code: fever_present
+    question_text: "Any fever with this?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: context
+    variants: []
+
+  - question_code: ask_abdominal_pain
+    field_code: abdominal_pain
+    question_text: "Does your child have belly pain?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: pain
+    variants: []
+
+  - question_code: ask_blood_gi
+    field_code: blood_in_stool_or_vomit
+    question_text: "Any blood in the vomit or stool?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: safety
+    variants: []
+
+red_flag_rules:
+  - rule_code: dehydration_risk
+    description: Unable to keep fluids down or reduced urine
+    logic_json:
+      any:
+        - field: keeps_fluids_down
+          op: eq
+          value: false
+        - field: urine_output
+          op: in
+          value:
+            - much_less
+            - none
+        - field: blood_in_stool_or_vomit
+          op: eq
+          value: true
+    urgency_level: urgent
+    message: "These symptoms can suggest dehydration or another urgent problem. Please seek medical care promptly."

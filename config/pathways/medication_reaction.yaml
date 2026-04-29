@@ -1,0 +1,178 @@
+pathway_code: medication_reaction
+pathway_name: Medication Reaction / Allergy
+description: Medication-related reaction intake
+priority: 50
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 90
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: suspected_medication
+    field_label: Suspected medication
+    data_type: medication
+    is_required: true
+    priority_weight: 95
+    ask_group: medication
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: first_dose_time
+    field_label: When first dose was given
+    data_type: datetime
+    is_required: true
+    priority_weight: 80
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 30
+
+  - field_code: reaction_start_time
+    field_label: When reaction started
+    data_type: datetime
+    is_required: true
+    priority_weight: 90
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 40
+
+  - field_code: reaction_type
+    field_label: Type of reaction
+    data_type: multi_select
+    is_required: true
+    priority_weight: 95
+    ask_group: reaction
+    red_flag_relevance: false
+    display_order: 50
+
+  - field_code: breathing_or_swelling
+    field_label: Breathing trouble or facial swelling
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: rash_present
+    field_label: Rash present
+    data_type: boolean
+    is_required: false
+    priority_weight: 70
+    ask_group: reaction
+    red_flag_relevance: false
+    display_order: 70
+
+  - field_code: vomiting_or_diarrhea
+    field_label: Vomiting or diarrhea after medication
+    data_type: boolean
+    is_required: false
+    priority_weight: 70
+    ask_group: reaction
+    red_flag_relevance: false
+    display_order: 80
+
+  - field_code: medication_stopped
+    field_label: Medication stopped
+    data_type: boolean
+    is_required: false
+    priority_weight: 50
+    ask_group: action
+    red_flag_relevance: false
+    display_order: 90
+
+  - field_code: taken_before
+    field_label: Taken before previously
+    data_type: boolean
+    is_required: false
+    priority_weight: 40
+    ask_group: history
+    red_flag_relevance: false
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_medrxn
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_suspected_med
+    field_code: suspected_medication
+    question_text: "What medication do you think caused the reaction?"
+    expected_answer_type: medication
+    ask_order_hint: 20
+    group_key: medication
+    variants: []
+
+  - question_code: ask_first_dose
+    field_code: first_dose_time
+    question_text: "When was the first dose given?"
+    expected_answer_type: datetime
+    ask_order_hint: 30
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_reaction_start
+    field_code: reaction_start_time
+    question_text: "When did the reaction start after the medicine?"
+    expected_answer_type: datetime
+    ask_order_hint: 40
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_reaction_type
+    field_code: reaction_type
+    question_text: "What happened after the medicine: rash, vomiting, swelling, breathing trouble, sleepiness, or something else?"
+    expected_answer_type: multi_select
+    ask_order_hint: 50
+    group_key: reaction
+    variants: []
+
+  - question_code: ask_medrxn_breathing
+    field_code: breathing_or_swelling
+    question_text: "Any breathing trouble or lip, tongue, or facial swelling?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: safety
+    variants: []
+
+  - question_code: ask_medrxn_rash
+    field_code: rash_present
+    question_text: "Was there a rash?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: reaction
+    variants: []
+
+  - question_code: ask_medrxn_gi
+    field_code: vomiting_or_diarrhea
+    question_text: "Any vomiting or diarrhea after the medicine?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: reaction
+    variants: []
+
+  - question_code: ask_medrxn_stopped
+    field_code: medication_stopped
+    question_text: "Did you stop the medication?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: action
+    variants: []
+
+red_flag_rules:
+  - rule_code: possible_anaphylaxis
+    description: Medication reaction with breathing or swelling
+    logic_json:
+      field: breathing_or_swelling
+      op: eq
+      value: true
+    urgency_level: emergency
+    message: "This could be a serious allergic reaction. Please seek emergency care immediately."

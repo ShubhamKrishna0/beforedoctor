@@ -5,15 +5,23 @@ from app.agents.doctor_agent.doctor_agent import DoctorAgent
 from app.agents.orchestrator.llm_orchestrator import LLMOrchestrator
 from app.agents.orchestrator.risk_detector import RiskDetector
 from app.core.config.settings import get_settings
+from app.repositories.conversation_pathway_state_repository import (
+    ConversationPathwayStateRepository,
+)
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 from app.repositories.question_bank_repository import QuestionBankRepository
 from app.schemas.chat import ChatMessageRequest, ChatMessageResponse, DoctorResponsePayload
+from app.services.answer_extractor.answer_extractor import AnswerExtractor
 from app.services.audio_service.audio_service import AudioService
 from app.services.medical_context.medical_context_service import MedicalContextService
 from app.services.memory.memory_layer import MemoryLayer
+from app.services.pathway_classifier.pathway_classifier import PathwayClassifier
+from app.services.pathway_data.pathway_data_provider import PathwayDataProvider
 from app.services.personalization.personalization_engine import PersonalizationEngine
+from app.services.question_engine.pathway_question_engine import PathwayQuestionEngine
 from app.services.question_engine.question_engine import QuestionEngine
+from app.services.red_flag_evaluator.red_flag_evaluator import evaluate as red_flag_evaluate
 from app.services.tts_service.tts_service import TTSService
 
 logger = logging.getLogger(__name__)
@@ -41,6 +49,13 @@ class ChatController:
         question_bank_repo = QuestionBankRepository()
         self.question_engine = QuestionEngine(question_bank_repo, openai_client)
 
+        # Pathway components
+        self.pathway_data_provider = PathwayDataProvider()
+        self.pathway_classifier = PathwayClassifier()
+        self.pathway_question_engine = PathwayQuestionEngine()
+        self.answer_extractor = AnswerExtractor()
+        self.conversation_pathway_state_repository = ConversationPathwayStateRepository()
+
         self.orchestrator = LLMOrchestrator(
             risk_detector=self.risk_detector,
             question_engine=self.question_engine,
@@ -48,6 +63,12 @@ class ChatController:
             memory_layer=self.memory_layer,
             personalization_engine=self.personalization_engine,
             doctor_agent=self.doctor_agent,
+            pathway_data_provider=self.pathway_data_provider,
+            pathway_classifier=self.pathway_classifier,
+            pathway_question_engine=self.pathway_question_engine,
+            answer_extractor=self.answer_extractor,
+            red_flag_evaluator_fn=red_flag_evaluate,
+            conversation_pathway_state_repository=self.conversation_pathway_state_repository,
         )
 
     def _resolve_conversation_id(self, user_id: str, conversation_id: str | None) -> str:

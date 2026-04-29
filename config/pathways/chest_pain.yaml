@@ -1,0 +1,230 @@
+pathway_code: chest_pain
+pathway_name: Chest Pain / Palpitations
+description: Chest pain, palpitations, or syncope — distinct from breathing-related respiratory symptoms
+priority: 85
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When chest pain started
+    data_type: datetime
+    is_required: true
+    priority_weight: 80
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: pain_character
+    field_label: Character of chest pain
+    data_type: single_select
+    is_required: true
+    priority_weight: 85
+    ask_group: pain
+    red_flag_relevance: true
+    display_order: 30
+
+  - field_code: pain_with_exertion
+    field_label: Pain or symptoms with exercise
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 40
+
+  - field_code: pain_with_breathing
+    field_label: Pain worsens with breathing
+    data_type: boolean
+    is_required: true
+    priority_weight: 75
+    ask_group: symptoms
+    red_flag_relevance: false
+    display_order: 50
+
+  - field_code: palpitations
+    field_label: Palpitations or racing heart
+    data_type: boolean
+    is_required: true
+    priority_weight: 95
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: syncope_or_near_syncope
+    field_label: Fainting or near-fainting
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: associated_symptoms
+    field_label: Associated symptoms
+    data_type: multi_select
+    is_required: false
+    priority_weight: 70
+    ask_group: symptoms
+    red_flag_relevance: false
+    display_order: 80
+
+  - field_code: family_heart_history
+    field_label: Family history of sudden cardiac death or heart condition
+    data_type: boolean
+    is_required: false
+    priority_weight: 85
+    ask_group: history
+    red_flag_relevance: true
+    display_order: 90
+
+  - field_code: known_heart_condition
+    field_label: Known heart condition
+    data_type: boolean
+    is_required: false
+    priority_weight: 90
+    ask_group: history
+    red_flag_relevance: true
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_chest
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_chest_syncope
+    field_code: syncope_or_near_syncope
+    question_text: "Has your child fainted or felt like they were about to faint?"
+    expected_answer_type: boolean
+    ask_order_hint: 15
+    group_key: safety
+    variants: []
+
+  - question_code: ask_chest_onset
+    field_code: onset_time
+    question_text: "When did the chest pain or discomfort start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_chest_character
+    field_code: pain_character
+    question_text: "How would you describe the chest pain — sharp, pressure-like, burning, or a dull ache?"
+    expected_answer_type: single_select
+    ask_order_hint: 30
+    group_key: pain
+    variants: []
+
+  - question_code: ask_chest_exertion
+    field_code: pain_with_exertion
+    question_text: "Did the chest pain or symptoms start during exercise or physical activity?"
+    expected_answer_type: boolean
+    ask_order_hint: 40
+    group_key: safety
+    variants: []
+
+  - question_code: ask_chest_breathing
+    field_code: pain_with_breathing
+    question_text: "Does the pain get worse when taking a deep breath?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_chest_palpitations
+    field_code: palpitations
+    question_text: "Is your child's heart racing, pounding, or beating irregularly?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: safety
+    variants: []
+
+  - question_code: ask_chest_associated
+    field_code: associated_symptoms
+    question_text: "Any dizziness, sweating, nausea, or arm or jaw pain?"
+    expected_answer_type: multi_select
+    ask_order_hint: 70
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_chest_family_history
+    field_code: family_heart_history
+    question_text: "Is there any family history of sudden cardiac death, heart attacks at a young age, or inherited heart conditions?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: history
+    variants: []
+
+  - question_code: ask_chest_known_condition
+    field_code: known_heart_condition
+    question_text: "Has your child been diagnosed with any heart condition?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: history
+    variants: []
+
+red_flag_rules:
+  - rule_code: chest_syncope
+    description: Chest pain with fainting or near-fainting
+    logic_json:
+      all:
+        - field: syncope_or_near_syncope
+          op: eq
+          value: true
+    urgency_level: emergency
+    message: "Chest pain with fainting can indicate a serious heart problem. Go to the emergency room immediately."
+
+  - rule_code: chest_exertional
+    description: Chest pain or palpitations with exertion
+    logic_json:
+      any:
+        - all:
+            - field: pain_with_exertion
+              op: eq
+              value: true
+            - field: palpitations
+              op: eq
+              value: true
+        - all:
+            - field: pain_with_exertion
+              op: eq
+              value: true
+            - field: syncope_or_near_syncope
+              op: eq
+              value: true
+    urgency_level: urgent
+    message: "Chest pain or palpitations during exercise needs urgent cardiac evaluation. Please seek care today — avoid strenuous activity until seen."
+
+  - rule_code: chest_palpitations_family_hx
+    description: Palpitations with family history of sudden cardiac death
+    logic_json:
+      all:
+        - field: palpitations
+          op: eq
+          value: true
+        - field: family_heart_history
+          op: eq
+          value: true
+    urgency_level: urgent
+    message: "Palpitations with a family history of heart problems needs prompt evaluation. Please seek medical care today."
+
+  - rule_code: chest_known_heart_condition
+    description: Chest pain in child with known heart condition
+    logic_json:
+      field: known_heart_condition
+      op: eq
+      value: true
+    urgency_level: urgent
+    message: "Chest pain in a child with a known heart condition needs urgent evaluation. Contact your cardiologist or seek emergency care."

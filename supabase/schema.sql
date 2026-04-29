@@ -87,6 +87,17 @@ create table if not exists before_doctor.response_feedback (
   unique(ai_response_id, user_id)
 );
 
+create table if not exists before_doctor.conversation_pathway_state (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null unique references before_doctor.conversations(id) on delete cascade,
+  pathway_code text,
+  gathered_fields jsonb not null default '{}',
+  current_question_code text,
+  triggered_red_flags jsonb not null default '[]',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists idx_before_doctor_conversations_user_id
   on before_doctor.conversations(user_id);
 
@@ -105,6 +116,9 @@ create index if not exists idx_question_bank_symptom
 create index if not exists idx_medical_memory_user_active
   on before_doctor.user_medical_memory(user_id) where is_active = true;
 
+create index if not exists idx_pathway_state_conversation
+  on before_doctor.conversation_pathway_state(conversation_id);
+
 alter table before_doctor.users enable row level security;
 alter table before_doctor.conversations enable row level security;
 alter table before_doctor.messages enable row level security;
@@ -115,6 +129,7 @@ alter table before_doctor.question_bank enable row level security;
 alter table before_doctor.user_profiles enable row level security;
 alter table before_doctor.user_medical_memory enable row level security;
 alter table before_doctor.response_feedback enable row level security;
+alter table before_doctor.conversation_pathway_state enable row level security;
 
 create policy "users can view self"
   on before_doctor.users
@@ -221,3 +236,21 @@ create policy "users manage own feedback"
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+create policy "users manage own pathway state"
+  on before_doctor.conversation_pathway_state
+  for all
+  using (
+    exists (
+      select 1
+      from before_doctor.conversations c
+      where c.id = conversation_id and c.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from before_doctor.conversations c
+      where c.id = conversation_id and c.user_id = auth.uid()
+    )
+  );

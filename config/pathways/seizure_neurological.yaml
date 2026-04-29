@@ -1,0 +1,174 @@
+pathway_code: seizure_neurological
+pathway_name: Seizure / neurological event
+description: First or repeated seizure, febrile seizure, prolonged episode
+priority: 14
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When the episode started
+    data_type: datetime
+    is_required: true
+    priority_weight: 95
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: seizure_duration_minutes
+    field_label: Longest single episode in minutes (approximate)
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 30
+
+  - field_code: first_seizure
+    field_label: First known seizure episode
+    data_type: boolean
+    is_required: true
+    priority_weight: 90
+    ask_group: history
+    red_flag_relevance: true
+    display_order: 40
+
+  - field_code: fever_present
+    field_label: Fever during or just before the episode
+    data_type: boolean
+    is_required: true
+    priority_weight: 85
+    ask_group: context
+    red_flag_relevance: false
+    display_order: 50
+
+  - field_code: returned_to_normal
+    field_label: Back to usual self between episodes
+    data_type: boolean
+    is_required: true
+    priority_weight: 95
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: breathing_difficulty
+    field_label: Breathing problems during the episode
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: repeated_seizures_same_day
+    field_label: More than one seizure today
+    data_type: boolean
+    is_required: true
+    priority_weight: 95
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 80
+
+question_templates:
+  - question_code: ask_sz_age
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_sz_onset
+    field_code: onset_time
+    question_text: "When did the shaking or seizure activity start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_sz_duration
+    field_code: seizure_duration_minutes
+    question_text: "About how many minutes did the longest episode last? Your best estimate is fine."
+    expected_answer_type: integer
+    ask_order_hint: 30
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_sz_first
+    field_code: first_seizure
+    question_text: "Is this the first time this has happened?"
+    expected_answer_type: boolean
+    ask_order_hint: 40
+    group_key: history
+    variants: []
+
+  - question_code: ask_sz_fever
+    field_code: fever_present
+    question_text: "Did your child have a fever with this, or just before it?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: context
+    variants: []
+
+  - question_code: ask_sz_recovery
+    field_code: returned_to_normal
+    question_text: "After the episode, did they return to their usual self?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_sz_breathing
+    field_code: breathing_difficulty
+    question_text: "During the episode, was there trouble breathing or turning blue?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: safety
+    variants: []
+
+  - question_code: ask_sz_repeated
+    field_code: repeated_seizures_same_day
+    question_text: "Has there been more than one seizure or episode like this today?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: symptoms
+    variants: []
+
+red_flag_rules:
+  - rule_code: seizure_prolonged
+    description: Seizure lasting 5 minutes or more
+    logic_json:
+      field: seizure_duration_minutes
+      op: gte
+      value: 5
+    urgency_level: emergency
+    message: "Long seizures need emergency care. Call emergency services now if an episode is still going or just stopped."
+
+  - rule_code: seizure_not_recovered
+    description: Not back to baseline after seizure
+    logic_json:
+      field: returned_to_normal
+      op: eq
+      value: false
+    urgency_level: emergency
+    message: "If your child is not back to their usual self after a seizure, seek emergency care now."
+
+  - rule_code: seizure_cluster_breathing
+    description: Repeated seizures or breathing problems
+    logic_json:
+      any:
+        - field: repeated_seizures_same_day
+          op: eq
+          value: true
+        - field: breathing_difficulty
+          op: eq
+          value: true
+    urgency_level: emergency
+    message: "Multiple seizures or breathing problems during an episode are emergencies. Seek emergency care now."

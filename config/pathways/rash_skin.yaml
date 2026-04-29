@@ -1,0 +1,178 @@
+pathway_code: rash_skin
+pathway_name: Rash / Skin
+description: Rash and skin reaction intake
+priority: 40
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 90
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When rash started
+    data_type: datetime
+    is_required: true
+    priority_weight: 80
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: rash_location
+    field_label: Where rash is located
+    data_type: text
+    is_required: true
+    priority_weight: 70
+    ask_group: rash
+    red_flag_relevance: false
+    display_order: 30
+
+  - field_code: rash_spread
+    field_label: Has rash spread
+    data_type: boolean
+    is_required: false
+    priority_weight: 60
+    ask_group: rash
+    red_flag_relevance: false
+    display_order: 40
+
+  - field_code: itch_or_pain
+    field_label: Is rash itchy or painful
+    data_type: single_select
+    is_required: true
+    priority_weight: 70
+    ask_group: rash
+    red_flag_relevance: false
+    display_order: 50
+
+  - field_code: fever_present
+    field_label: Fever present
+    data_type: boolean
+    is_required: true
+    priority_weight: 80
+    ask_group: context
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: new_medication
+    field_label: Started new medication recently
+    data_type: boolean
+    is_required: true
+    priority_weight: 85
+    ask_group: context
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: breathing_or_swelling
+    field_label: Any breathing trouble or swelling
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 80
+
+  - field_code: mucosal_involvement
+    field_label: Mouth/eye/genital involvement
+    data_type: boolean
+    is_required: false
+    priority_weight: 95
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 90
+
+  - field_code: photo_upload
+    field_label: Optional rash photo
+    data_type: file_upload
+    is_required: false
+    priority_weight: 20
+    ask_group: media
+    red_flag_relevance: false
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_rash
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_rash_onset
+    field_code: onset_time
+    question_text: "When did the rash start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_rash_location
+    field_code: rash_location
+    question_text: "Where did the rash start, and where is it now?"
+    expected_answer_type: text
+    ask_order_hint: 30
+    group_key: rash
+    variants: []
+
+  - question_code: ask_rash_spread
+    field_code: rash_spread
+    question_text: "Has the rash spread since it started?"
+    expected_answer_type: boolean
+    ask_order_hint: 40
+    group_key: rash
+    variants: []
+
+  - question_code: ask_rash_itch_pain
+    field_code: itch_or_pain
+    question_text: "Is the rash itchy, painful, both, or neither?"
+    expected_answer_type: single_select
+    ask_order_hint: 50
+    group_key: rash
+    variants: []
+
+  - question_code: ask_rash_fever
+    field_code: fever_present
+    question_text: "Any fever with the rash?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: context
+    variants: []
+
+  - question_code: ask_rash_new_med
+    field_code: new_medication
+    question_text: "Did your child start any new medicine recently?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: context
+    variants: []
+
+  - question_code: ask_rash_breathing_swelling
+    field_code: breathing_or_swelling
+    question_text: "Any trouble breathing, lip swelling, or facial swelling?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: safety
+    variants: []
+
+  - question_code: ask_rash_mucosal
+    field_code: mucosal_involvement
+    question_text: "Any rash or sores in the mouth, eyes, or genital area?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: safety
+    variants: []
+
+red_flag_rules:
+  - rule_code: rash_anaphylaxis
+    description: Rash with swelling or breathing trouble
+    logic_json:
+      field: breathing_or_swelling
+      op: eq
+      value: true
+    urgency_level: urgent
+    message: "Rash with swelling or breathing trouble can be serious. Please seek urgent medical care now."

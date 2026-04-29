@@ -1,0 +1,182 @@
+pathway_code: fever
+pathway_name: Fever
+description: Fever and febrile illness intake
+priority: 10
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When fever started
+    data_type: datetime
+    is_required: true
+    priority_weight: 90
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: highest_temp
+    field_label: Highest temperature
+    data_type: temperature
+    is_required: true
+    priority_weight: 95
+    ask_group: temperature
+    red_flag_relevance: true
+    display_order: 30
+
+  - field_code: temp_measurement_method
+    field_label: How temperature was measured
+    data_type: single_select
+    is_required: true
+    priority_weight: 90
+    ask_group: temperature
+    red_flag_relevance: true
+    display_order: 40
+
+  - field_code: meds_given
+    field_label: Fever medication given
+    data_type: medication
+    is_required: false
+    priority_weight: 60
+    ask_group: meds
+    red_flag_relevance: false
+    display_order: 50
+
+  - field_code: response_to_meds
+    field_label: Response to fever meds
+    data_type: single_select
+    is_required: false
+    priority_weight: 50
+    ask_group: meds
+    red_flag_relevance: false
+    display_order: 60
+
+  - field_code: fluid_intake
+    field_label: Fluid intake status
+    data_type: single_select
+    is_required: true
+    priority_weight: 90
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: urine_output
+    field_label: Urine output status
+    data_type: single_select
+    is_required: true
+    priority_weight: 90
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 80
+
+  - field_code: lethargy
+    field_label: Less responsive or hard to wake
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 90
+
+  - field_code: associated_symptoms
+    field_label: Associated symptoms
+    data_type: multi_select
+    is_required: true
+    priority_weight: 70
+    ask_group: symptoms
+    red_flag_relevance: false
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_fever
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_highest_temp
+    field_code: highest_temp
+    question_text: "What was the highest temperature?"
+    expected_answer_type: temperature
+    ask_order_hint: 20
+    group_key: temperature
+    variants: []
+
+  - question_code: ask_temp_method
+    field_code: temp_measurement_method
+    question_text: "How did you measure the temperature: oral, ear, forehead, underarm, or rectal?"
+    expected_answer_type: single_select
+    ask_order_hint: 30
+    group_key: temperature
+    variants: []
+
+  - question_code: ask_fever_onset
+    field_code: onset_time
+    question_text: "When did the fever start?"
+    expected_answer_type: datetime
+    ask_order_hint: 40
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_fever_meds
+    field_code: meds_given
+    question_text: "Have you given Tylenol or Motrin or any other fever medicine?"
+    expected_answer_type: medication
+    ask_order_hint: 50
+    group_key: meds
+    variants: []
+
+  - question_code: ask_fever_hydration
+    field_code: fluid_intake
+    question_text: "Is your child drinking fluids normally, less than usual, or barely at all?"
+    expected_answer_type: single_select
+    ask_order_hint: 60
+    group_key: hydration
+    variants: []
+
+  - question_code: ask_fever_urine
+    field_code: urine_output
+    question_text: "Are they peeing normally, less often, or much less than usual?"
+    expected_answer_type: single_select
+    ask_order_hint: 70
+    group_key: hydration
+    variants: []
+
+  - question_code: ask_fever_lethargy
+    field_code: lethargy
+    question_text: "Is your child unusually sleepy, hard to wake, or less responsive than normal?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: safety
+    variants: []
+
+  - question_code: ask_fever_associated
+    field_code: associated_symptoms
+    question_text: "Any cough, vomiting, diarrhea, rash, or trouble breathing?"
+    expected_answer_type: multi_select
+    ask_order_hint: 90
+    group_key: symptoms
+    variants: []
+
+red_flag_rules:
+  - rule_code: infant_fever_under_3_months
+    description: Fever in a very young infant
+    logic_json:
+      all:
+        - field: age_months
+          op: lt
+          value: 3
+        - field: highest_temp
+          op: gte
+          value: 100.4
+    urgency_level: urgent
+    message: "Because fever in a very young infant can be serious, please seek urgent medical care."

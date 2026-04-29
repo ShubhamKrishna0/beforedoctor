@@ -1,0 +1,240 @@
+pathway_code: poisoning_ingestion
+pathway_name: Poisoning / Accidental Ingestion
+description: Accidental ingestion of medications, household chemicals, plants, or unknown substances
+priority: 97
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: Time of ingestion
+    data_type: datetime
+    is_required: true
+    priority_weight: 100
+    ask_group: timeline
+    red_flag_relevance: true
+    display_order: 20
+
+  - field_code: substance_type
+    field_label: Type of substance ingested
+    data_type: single_select
+    is_required: true
+    priority_weight: 100
+    ask_group: ingestion
+    red_flag_relevance: true
+    display_order: 30
+
+  - field_code: substance_name
+    field_label: Name or description of substance
+    data_type: text
+    is_required: true
+    priority_weight: 100
+    ask_group: ingestion
+    red_flag_relevance: false
+    display_order: 40
+
+  - field_code: amount_ingested
+    field_label: Estimated amount ingested
+    data_type: text
+    is_required: true
+    priority_weight: 90
+    ask_group: ingestion
+    red_flag_relevance: true
+    display_order: 50
+
+  - field_code: symptoms_present
+    field_label: Symptoms since ingestion
+    data_type: single_select
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: child_weight_kg
+    field_label: Child weight in kg
+    data_type: number
+    is_required: true
+    priority_weight: 85
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: intentional_ingestion
+    field_label: Ingestion appears intentional
+    data_type: boolean
+    is_required: false
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 80
+
+  - field_code: foreign_body_type
+    field_label: Foreign body swallowed (button battery, magnet, coin)
+    data_type: single_select
+    is_required: false
+    priority_weight: 100
+    ask_group: ingestion
+    red_flag_relevance: true
+    display_order: 90
+
+  - field_code: vomiting_induced
+    field_label: Vomiting was induced
+    data_type: boolean
+    is_required: false
+    priority_weight: 75
+    ask_group: action
+    red_flag_relevance: true
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_ingestion
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_ingestion_symptoms
+    field_code: symptoms_present
+    question_text: "How is your child acting right now — are they completely normal, drowsy, vomiting, or unconscious?"
+    expected_answer_type: single_select
+    ask_order_hint: 15
+    group_key: safety
+    variants: []
+
+  - question_code: ask_ingestion_substance
+    field_code: substance_name
+    question_text: "What did your child swallow or eat? Please be as specific as possible — brand name, type of plant, etc."
+    expected_answer_type: text
+    ask_order_hint: 20
+    group_key: ingestion
+    variants: []
+
+  - question_code: ask_ingestion_type
+    field_code: substance_type
+    question_text: "What category best describes it — a medication, a household chemical, a plant or berry, a foreign object (like a battery or coin), or something else?"
+    expected_answer_type: single_select
+    ask_order_hint: 30
+    group_key: ingestion
+    variants: []
+
+  - question_code: ask_ingestion_when
+    field_code: onset_time
+    question_text: "When did the ingestion happen — what time?"
+    expected_answer_type: datetime
+    ask_order_hint: 35
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_ingestion_amount
+    field_code: amount_ingested
+    question_text: "How much did they swallow? For pills, how many? For liquids, roughly how much?"
+    expected_answer_type: text
+    ask_order_hint: 40
+    group_key: ingestion
+    variants: []
+
+  - question_code: ask_ingestion_weight
+    field_code: child_weight_kg
+    question_text: "How much does your child weigh in kilograms or pounds?"
+    expected_answer_type: number
+    ask_order_hint: 50
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_ingestion_foreign_body
+    field_code: foreign_body_type
+    question_text: "Did your child swallow a button battery, magnets, a coin, or another hard object?"
+    expected_answer_type: single_select
+    ask_order_hint: 55
+    group_key: ingestion
+    variants: []
+
+  - question_code: ask_ingestion_intentional
+    field_code: intentional_ingestion
+    question_text: "Do you have any concern that this may have been intentional rather than accidental?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: safety
+    variants: []
+
+  - question_code: ask_ingestion_vomiting_induced
+    field_code: vomiting_induced
+    question_text: "Did you try to make your child vomit after the ingestion?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: action
+    variants: []
+
+red_flag_rules:
+  - rule_code: ingestion_symptoms_severe
+    description: Drowsiness, seizure, or unconsciousness after ingestion
+    logic_json:
+      field: symptoms_present
+      op: in
+      value:
+        - drowsy
+        - unconscious
+        - seizure
+        - not_responding
+    urgency_level: emergency
+    message: "Your child has symptoms after ingesting something. This is a medical emergency — call 911 now."
+
+  - rule_code: ingestion_button_battery
+    description: Button battery ingestion — causes rapid tissue damage
+    logic_json:
+      field: foreign_body_type
+      op: eq
+      value: button_battery
+    urgency_level: emergency
+    message: "A swallowed button battery is a medical emergency — it can cause severe internal burns within 2 hours. Go to the emergency room immediately."
+
+  - rule_code: ingestion_magnets
+    description: Multiple magnets swallowed — intestinal perforation risk
+    logic_json:
+      field: foreign_body_type
+      op: eq
+      value: multiple_magnets
+    urgency_level: emergency
+    message: "Multiple swallowed magnets can attract through intestinal walls and cause perforation. Go to the emergency room now."
+
+  - rule_code: ingestion_chemical
+    description: Household chemical or caustic substance ingested
+    logic_json:
+      field: substance_type
+      op: in
+      value:
+        - household_chemical
+        - caustic
+        - bleach
+        - detergent
+        - battery_acid
+    urgency_level: emergency
+    message: "Chemical ingestion is a medical emergency. Do not induce vomiting. Call Poison Control (1-800-222-1222) and go to the emergency room."
+
+  - rule_code: ingestion_intentional_adolescent
+    description: Suspected intentional ingestion — dual medical and mental health emergency
+    logic_json:
+      field: intentional_ingestion
+      op: eq
+      value: true
+    urgency_level: emergency
+    message: "A suspected intentional ingestion is both a medical and mental health emergency. Call 911 and go to the emergency room now."
+
+  - rule_code: ingestion_any_medication
+    description: Any medication ingestion — contact Poison Control
+    logic_json:
+      field: substance_type
+      op: eq
+      value: medication
+    urgency_level: urgent
+    message: "Please call Poison Control immediately at 1-800-222-1222. They will advise whether emergency care is needed based on the specific medication and amount."

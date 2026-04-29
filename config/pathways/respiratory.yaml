@@ -1,0 +1,185 @@
+pathway_code: respiratory
+pathway_name: Respiratory
+description: Cough, congestion, wheeze, breathing concerns
+priority: 20
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When symptoms started
+    data_type: datetime
+    is_required: true
+    priority_weight: 85
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: cough_type
+    field_label: Type of cough
+    data_type: single_select
+    is_required: false
+    priority_weight: 50
+    ask_group: cough
+    red_flag_relevance: false
+    display_order: 30
+
+  - field_code: breathing_difficulty
+    field_label: Trouble breathing
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 40
+
+  - field_code: wheezing
+    field_label: Wheezing present
+    data_type: boolean
+    is_required: false
+    priority_weight: 70
+    ask_group: breathing
+    red_flag_relevance: true
+    display_order: 50
+
+  - field_code: noisy_breathing
+    field_label: Noisy breathing / stridor
+    data_type: boolean
+    is_required: false
+    priority_weight: 90
+    ask_group: breathing
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: retractions_present
+    field_label: Retractions present
+    data_type: boolean
+    is_required: false
+    priority_weight: 95
+    ask_group: breathing
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: fever_present
+    field_label: Fever present
+    data_type: boolean
+    is_required: true
+    priority_weight: 70
+    ask_group: context
+    red_flag_relevance: false
+    display_order: 80
+
+  - field_code: fluid_intake
+    field_label: Fluid intake status
+    data_type: single_select
+    is_required: true
+    priority_weight: 80
+    ask_group: hydration
+    red_flag_relevance: true
+    display_order: 90
+
+  - field_code: history_of_asthma
+    field_label: History of asthma
+    data_type: boolean
+    is_required: false
+    priority_weight: 60
+    ask_group: history
+    red_flag_relevance: false
+    display_order: 100
+
+question_templates:
+  - question_code: ask_age_respiratory
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_resp_onset
+    field_code: onset_time
+    question_text: "When did the breathing or cough symptoms start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_breathing_difficulty
+    field_code: breathing_difficulty
+    question_text: "Is your child having trouble breathing, or is it mainly cough and congestion?"
+    expected_answer_type: boolean
+    ask_order_hint: 30
+    group_key: safety
+    variants: []
+
+  - question_code: ask_wheezing
+    field_code: wheezing
+    question_text: "Do you hear wheezing or a whistling sound when your child breathes?"
+    expected_answer_type: boolean
+    ask_order_hint: 40
+    group_key: breathing
+    variants: []
+
+  - question_code: ask_noisy_breathing
+    field_code: noisy_breathing
+    question_text: "Do you hear any noisy breathing or a harsh sound when breathing in?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: breathing
+    variants: []
+
+  - question_code: ask_retractions
+    field_code: retractions_present
+    question_text: "Do you see the skin pulling in between the ribs or at the neck when breathing?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: breathing
+    variants: []
+
+  - question_code: ask_resp_fever
+    field_code: fever_present
+    question_text: "Has your child had a fever with this?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: context
+    variants: []
+
+  - question_code: ask_resp_fluids
+    field_code: fluid_intake
+    question_text: "Is your child able to drink normally?"
+    expected_answer_type: single_select
+    ask_order_hint: 80
+    group_key: hydration
+    variants: []
+
+  - question_code: ask_resp_asthma
+    field_code: history_of_asthma
+    question_text: "Does your child have asthma or use an inhaler?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: history
+    variants: []
+
+red_flag_rules:
+  - rule_code: resp_distress
+    description: Trouble breathing or retractions
+    logic_json:
+      any:
+        - field: breathing_difficulty
+          op: eq
+          value: true
+        - field: retractions_present
+          op: eq
+          value: true
+        - field: noisy_breathing
+          op: eq
+          value: true
+    urgency_level: urgent
+    message: "Breathing symptoms can be serious. Please seek urgent medical care now."

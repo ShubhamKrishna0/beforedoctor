@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import json
 import logging
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
@@ -17,6 +20,18 @@ from app.services.personalization.personalization_engine import (
     PersonalizationEngine,
 )
 from app.services.question_engine.question_engine import QuestionEngine
+
+if TYPE_CHECKING:
+    from app.models.pathway_models import PathwayState
+    from app.repositories.conversation_pathway_state_repository import (
+        ConversationPathwayStateRepository,
+    )
+    from app.services.answer_extractor.answer_extractor import AnswerExtractor
+    from app.services.pathway_classifier.pathway_classifier import PathwayClassifier
+    from app.services.pathway_data.pathway_data_provider import PathwayDataProvider
+    from app.services.question_engine.pathway_question_engine import (
+        PathwayQuestionEngine,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +108,13 @@ class LLMOrchestrator:
         memory_layer: MemoryLayer,
         personalization_engine: PersonalizationEngine,
         doctor_agent: DoctorAgent,
+        # --- Pathway components (optional — None preserves legacy behaviour) ---
+        pathway_data_provider: PathwayDataProvider | None = None,
+        pathway_classifier: PathwayClassifier | None = None,
+        pathway_question_engine: PathwayQuestionEngine | None = None,
+        answer_extractor: AnswerExtractor | None = None,
+        red_flag_evaluator_fn=None,  # callable: evaluate(gathered_fields, rules) -> list[RedFlagResult]
+        conversation_pathway_state_repository: ConversationPathwayStateRepository | None = None,
     ) -> None:
         self.risk_detector = risk_detector
         self.question_engine = question_engine
@@ -100,6 +122,14 @@ class LLMOrchestrator:
         self.memory_layer = memory_layer
         self.personalization_engine = personalization_engine
         self.doctor_agent = doctor_agent
+
+        # Pathway components — all optional for backward compatibility
+        self.pathway_data_provider = pathway_data_provider
+        self.pathway_classifier = pathway_classifier
+        self.pathway_question_engine = pathway_question_engine
+        self.answer_extractor = answer_extractor
+        self._red_flag_evaluate = red_flag_evaluator_fn
+        self.pathway_state_repo = conversation_pathway_state_repository
 
     async def process_message(
         self,
@@ -143,14 +173,33 @@ class LLMOrchestrator:
         )
 
         # ------------------------------------------------------------------
-        # 5. Phase transition logic
+        # 4b. Pathway pipeline (if components are wired)
+        # ------------------------------------------------------------------
+        if self._pathway_components_available():
+            pathway_result = await self._try_pathway_pipeline(
+                conversation_id=conversation_id,
+                user_id=user_id,
+                user_message=user_message,
+                conversation_history=conversation_history,
+                medical_context=medical_context,
+                active_facts=active_facts,
+                profile_summary=profile_summary,
+                symptom_classification=symptom_classification,
+                smart_alerts=smart_alerts,
+            )
+            if pathway_result is not None:
+                return pathway_result
+            # pathway_result is None → classification failed, fall through to legacy
+
+        # ------------------------------------------------------------------
+        # 5. Phase transition logic (legacy path)
         # ------------------------------------------------------------------
         effective_phase = self._resolve_phase(
             current_phase, conversation_history
         )
 
         # ------------------------------------------------------------------
-        # 6. Question-or-response decision
+        # 6. Question-or-response decision (legacy path)
         # ------------------------------------------------------------------
         if effective_phase == "gathering":
             return await self._handle_gathering(
@@ -172,6 +221,275 @@ class LLMOrchestrator:
             symptom_classification,
             smart_alerts,
         )
+
+    # ==================================================================
+    # Pathway pipeline helpers
+    # ==================================================================
+
+    def _pathway_components_available(self) -> bool:
+        """Return True when all pathway components have been wired."""
+        return all([
+            self.pathway_data_provider is not None,
+            self.pathway_classifier is not None,
+            self.pathway_question_engine is not None,
+            self.answer_extractor is not None,
+            self._red_flag_evaluate is not None,
+            self.pathway_state_repo is not None,
+        ])
+
+    async def _try_pathway_pipeline(
+        self,
+        conversation_id: str,
+        user_id: str,
+        user_message: str,
+        conversation_history: list[dict],
+        medical_context,
+        active_facts: list,
+        profile_summary: str,
+        symptom_classification: str | None,
+        smart_alerts: list[str],
+    ) -> OrchestratorResult | None:
+        """Run the pathway-driven pipeline.
+
+        Returns an ``OrchestratorResult`` when the pathway is active, or
+        ``None`` to signal the caller to fall back to legacy behaviour.
+        """
+        assert self.pathway_data_provider is not None
+        assert self.pathway_classifier is not None
+        assert self.pathway_question_engine is not None
+        assert self.answer_extractor is not None
+        assert self._red_flag_evaluate is not None
+        assert self.pathway_state_repo is not None
+
+        # --- Load (or initialise) pathway state ---
+        try:
+            pathway_state = self.pathway_state_repo.get_state(conversation_id)
+        except Exception:
+            logger.exception("Failed to load pathway state for %s, falling back to legacy", conversation_id)
+            return None
+
+        # --- First message: classify the pathway ---
+        if pathway_state is None:
+            available = self.pathway_data_provider.get_all_pathway_codes()
+            if not available:
+                return None  # No pathway data → legacy fallback
+
+            try:
+                pathway_code = await self.pathway_classifier.classify(
+                    user_message, available
+                )
+            except Exception:
+                logger.exception("Pathway classification failed, falling back to legacy")
+                return None
+
+            if pathway_code is None:
+                return None  # Classification failed → legacy fallback
+
+            from app.models.pathway_models import PathwayState as _PS
+
+            pathway_state = _PS(
+                conversation_id=conversation_id,
+                pathway_code=pathway_code,
+            )
+
+        # At this point we have a pathway_code
+        pathway_code = pathway_state.pathway_code
+        if pathway_code is None:
+            return None  # Shouldn't happen, but guard
+
+        # --- Answer extraction ---
+        required_fields = self.pathway_data_provider.get_required_fields(pathway_code)
+        current_question_code = pathway_state.current_question_code
+
+        # Determine the target field for extraction (the field we last asked about)
+        target_field = None
+        if current_question_code:
+            templates = self.pathway_data_provider.get_question_templates(pathway_code)
+            for t in templates:
+                if t.question_code == current_question_code:
+                    for rf in required_fields:
+                        if rf.field_code == t.field_code:
+                            target_field = rf
+                            break
+                    break
+
+        # If no target field yet (first message), pick the first required field
+        if target_field is None and required_fields:
+            target_field = required_fields[0]
+
+        if target_field is not None:
+            try:
+                extracted = await self.answer_extractor.extract(
+                    user_text=user_message,
+                    target_field=target_field,
+                    all_pathway_fields=required_fields,
+                    gathered_fields=pathway_state.gathered_fields,
+                )
+            except Exception:
+                logger.exception("Answer extraction failed, re-asking same question")
+                extracted = {}
+
+            if extracted:
+                pathway_state.gathered_fields.update(extracted)
+
+        # --- Red flag evaluation ---
+        red_flag_rules = self.pathway_data_provider.get_red_flag_rules(pathway_code)
+        try:
+            triggered_flags = self._red_flag_evaluate(
+                pathway_state.gathered_fields, red_flag_rules
+            )
+        except Exception:
+            logger.exception("Red flag evaluation failed, continuing gathering")
+            triggered_flags = []
+
+        # Store triggered flags
+        if triggered_flags:
+            pathway_state.triggered_red_flags = [
+                {"rule_code": f.rule_code, "urgency_level": f.urgency_level, "message": f.message}
+                for f in triggered_flags
+            ]
+
+        # --- Check for emergency red flag → immediate escalation ---
+        emergency_flags = [f for f in triggered_flags if f.urgency_level == "emergency"]
+        if emergency_flags:
+            self._save_pathway_state_safe(conversation_id, pathway_state)
+            escalation_msg = emergency_flags[0].message
+            return OrchestratorResult(
+                phase="responding",
+                questions=None,
+                response=DoctorResponsePayload(
+                    summary_of_symptoms=escalation_msg,
+                    possible_causes=[],
+                    immediate_advice=[
+                        escalation_msg,
+                        "Please seek emergency medical care immediately.",
+                    ],
+                    lifestyle_suggestions=[],
+                    warning_signs=[escalation_msg],
+                    when_to_see_a_real_doctor="Seek emergency care NOW.",
+                    medical_disclaimer=(
+                        "This AI assistant is not a substitute for professional medical advice. "
+                        "If this is an emergency, call emergency services immediately."
+                    ),
+                    follow_up_questions=[],
+                ),
+                is_urgent=True,
+                symptom_classification=symptom_classification,
+                smart_alerts=smart_alerts,
+            )
+
+        # --- Check for urgent red flag → transition to responding with urgency ---
+        urgent_flags = [f for f in triggered_flags if f.urgency_level == "urgent"]
+        if urgent_flags:
+            self._save_pathway_state_safe(conversation_id, pathway_state)
+            urgency_context = "; ".join(f.message for f in urgent_flags)
+            return await self._handle_pathway_responding(
+                user_id=user_id,
+                user_message=user_message,
+                conversation_history=conversation_history,
+                medical_context=medical_context,
+                active_facts=active_facts,
+                profile_summary=profile_summary,
+                symptom_classification=symptom_classification,
+                smart_alerts=smart_alerts,
+                gathered_fields=pathway_state.gathered_fields,
+                pathway_code=pathway_code,
+                urgency_context=urgency_context,
+            )
+
+        # --- No red flag: check if gathering is complete ---
+        question_result = self.pathway_question_engine.next_question(
+            pathway_code=pathway_code,
+            gathered_fields=pathway_state.gathered_fields,
+            pathway_data=self.pathway_data_provider,
+        )
+
+        if question_result.is_complete:
+            # All required fields gathered → transition to responding
+            self._save_pathway_state_safe(conversation_id, pathway_state)
+            return await self._handle_pathway_responding(
+                user_id=user_id,
+                user_message=user_message,
+                conversation_history=conversation_history,
+                medical_context=medical_context,
+                active_facts=active_facts,
+                profile_summary=profile_summary,
+                symptom_classification=symptom_classification,
+                smart_alerts=smart_alerts,
+                gathered_fields=pathway_state.gathered_fields,
+                pathway_code=pathway_code,
+            )
+
+        # --- More questions needed: return the single question ---
+        # Update current_question_code for next turn's extraction target
+        if question_result.field_code:
+            templates = self.pathway_data_provider.get_question_templates(pathway_code)
+            for t in templates:
+                if t.field_code == question_result.field_code:
+                    pathway_state.current_question_code = t.question_code
+                    break
+
+        self._save_pathway_state_safe(conversation_id, pathway_state)
+
+        return OrchestratorResult(
+            phase="gathering",
+            questions=[question_result.question_text] if question_result.question_text else [],
+            is_urgent=False,
+            symptom_classification=symptom_classification,
+            smart_alerts=smart_alerts,
+        )
+
+    async def _handle_pathway_responding(
+        self,
+        user_id: str,
+        user_message: str,
+        conversation_history: list[dict],
+        medical_context,
+        active_facts: list,
+        profile_summary: str,
+        symptom_classification: str | None,
+        smart_alerts: list[str],
+        gathered_fields: dict,
+        pathway_code: str,
+        urgency_context: str | None = None,
+    ) -> OrchestratorResult:
+        """Transition to responding with gathered pathway fields included in the prompt."""
+        try:
+            response_dict = await self._generate_doctor_response_with_context(
+                user_id=user_id,
+                user_message=user_message,
+                conversation_history=conversation_history,
+                medical_context=medical_context,
+                active_facts=active_facts,
+                profile_summary=profile_summary,
+                is_urgent=urgency_context is not None,
+                gathered_fields=gathered_fields,
+                pathway_code=pathway_code,
+                urgency_context=urgency_context,
+            )
+            response = DoctorResponsePayload(**response_dict)
+        except Exception:
+            logger.exception("Failed to generate pathway response, using safe fallback")
+            response = _SAFE_RESPONSE
+
+        conversation_summary = self._build_conversation_summary(conversation_history)
+
+        return OrchestratorResult(
+            phase="responding",
+            response=response,
+            conversation_summary=conversation_summary,
+            is_urgent=urgency_context is not None,
+            symptom_classification=symptom_classification,
+            smart_alerts=smart_alerts,
+        )
+
+    def _save_pathway_state_safe(self, conversation_id: str, state: PathwayState) -> None:
+        """Persist pathway state, logging but not raising on failure."""
+        try:
+            assert self.pathway_state_repo is not None
+            self.pathway_state_repo.save_state(conversation_id, state)
+        except Exception:
+            logger.exception("Failed to save pathway state for %s", conversation_id)
 
     # ==================================================================
     # Private helpers
@@ -292,6 +610,9 @@ class LLMOrchestrator:
         active_facts: list,
         profile_summary: str,
         is_urgent: bool,
+        gathered_fields: dict | None = None,
+        pathway_code: str | None = None,
+        urgency_context: str | None = None,
     ) -> dict:
         """Build a context-enriched prompt and call DoctorAgent with fallback.
 
@@ -314,6 +635,22 @@ class LLMOrchestrator:
                 "\n\nURGENT: The user may be experiencing a medical emergency. "
                 "Advise them to seek immediate emergency care. Provide a concise, "
                 "structured response with emergency guidance."
+            )
+
+        # Include pathway gathered fields in the prompt
+        if gathered_fields and pathway_code:
+            fields_text = "\n".join(f"  - {k}: {v}" for k, v in gathered_fields.items())
+            system_prompt += (
+                f"\n\n--- PATHWAY DATA (pathway: {pathway_code}) ---\n"
+                f"The following clinical information was gathered during the intake:\n"
+                f"{fields_text}\n"
+                f"--- END PATHWAY DATA ---"
+            )
+
+        if urgency_context:
+            system_prompt += (
+                f"\n\nURGENCY ALERT: {urgency_context}\n"
+                "Include this urgency information prominently in your response."
             )
 
         # --- 2. Safety rules ---

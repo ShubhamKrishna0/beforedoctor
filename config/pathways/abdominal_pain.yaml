@@ -1,0 +1,186 @@
+pathway_code: abdominal_pain
+pathway_name: Abdominal pain
+description: Stomachache, belly pain, possible appendicitis patterns
+priority: 28
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When belly pain started
+    data_type: datetime
+    is_required: true
+    priority_weight: 90
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: abd_pain_location
+    field_label: Where the pain is worst
+    data_type: text
+    is_required: true
+    priority_weight: 85
+    ask_group: symptoms
+    red_flag_relevance: false
+    display_order: 30
+
+  - field_code: abd_pain_severity
+    field_label: Pain severity 1-10
+    data_type: integer
+    is_required: true
+    priority_weight: 95
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 40
+
+  - field_code: fever_present
+    field_label: Fever with the belly pain
+    data_type: boolean
+    is_required: true
+    priority_weight: 90
+    ask_group: context
+    red_flag_relevance: true
+    display_order: 50
+
+  - field_code: vomiting_with_abd_pain
+    field_label: Vomiting with the belly pain
+    data_type: boolean
+    is_required: true
+    priority_weight: 88
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: diarrhea_today
+    field_label: Diarrhea today
+    data_type: boolean
+    is_required: true
+    priority_weight: 75
+    ask_group: symptoms
+    red_flag_relevance: false
+    display_order: 70
+
+  - field_code: abd_worse_with_movement
+    field_label: Pain much worse when moving, walking, or jumping
+    data_type: boolean
+    is_required: true
+    priority_weight: 85
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 80
+
+  - field_code: abd_rlq_focus
+    field_label: Pain mainly in the lower right belly
+    data_type: boolean
+    is_required: false
+    priority_weight: 80
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 90
+
+question_templates:
+  - question_code: ask_abd_age
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_abd_onset
+    field_code: onset_time
+    question_text: "When did the belly pain start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_abd_where
+    field_code: abd_pain_location
+    question_text: "Where does it hurt the most — all over, around the belly button, upper belly, or lower right side?"
+    expected_answer_type: text
+    ask_order_hint: 30
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_abd_severity
+    field_code: abd_pain_severity
+    question_text: "On a scale of 1 to 10, how bad is the pain right now?"
+    expected_answer_type: integer
+    ask_order_hint: 40
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_abd_fever
+    field_code: fever_present
+    question_text: "Does your child have a fever with this belly pain?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: context
+    variants: []
+
+  - question_code: ask_abd_vomit
+    field_code: vomiting_with_abd_pain
+    question_text: "Have they been throwing up along with the belly pain?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_abd_diarrhea
+    field_code: diarrhea_today
+    question_text: "Any diarrhea today?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_abd_movement
+    field_code: abd_worse_with_movement
+    question_text: "Is the pain a lot worse when they walk, jump, or move suddenly?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_abd_rlq
+    field_code: abd_rlq_focus
+    question_text: "Is the pain mostly in the lower right side of the belly?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: symptoms
+    variants: []
+
+red_flag_rules:
+  - rule_code: abd_appendicitis_pattern
+    description: Lower-right belly pain with fever
+    logic_json:
+      all:
+        - field: abd_rlq_focus
+          op: eq
+          value: true
+        - field: fever_present
+          op: eq
+          value: true
+    urgency_level: urgent
+    message: "Pain in the lower right belly with fever can be serious. Please seek urgent medical care today."
+
+  - rule_code: abd_severe_with_vomit
+    description: Severe abdominal pain with vomiting
+    logic_json:
+      all:
+        - field: abd_pain_severity
+          op: gte
+          value: 8
+        - field: vomiting_with_abd_pain
+          op: eq
+          value: true
+    urgency_level: urgent
+    message: "Severe belly pain with vomiting needs prompt medical assessment."

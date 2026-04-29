@@ -1,0 +1,186 @@
+pathway_code: allergic_reaction
+pathway_name: Allergic reaction
+description: Food, insect, or environmental allergy — hives, swelling, breathing symptoms
+priority: 12
+
+required_fields:
+  - field_code: age_months
+    field_label: Child age
+    data_type: integer
+    is_required: true
+    priority_weight: 100
+    ask_group: demographics
+    red_flag_relevance: true
+    display_order: 10
+
+  - field_code: onset_time
+    field_label: When reaction started
+    data_type: datetime
+    is_required: true
+    priority_weight: 90
+    ask_group: timeline
+    red_flag_relevance: false
+    display_order: 20
+
+  - field_code: allergy_trigger_type
+    field_label: Likely trigger
+    data_type: single_select
+    is_required: true
+    priority_weight: 95
+    ask_group: exposure
+    red_flag_relevance: false
+    display_order: 30
+
+  - field_code: skin_hives_rash
+    field_label: Hives or widespread rash
+    data_type: boolean
+    is_required: true
+    priority_weight: 85
+    ask_group: symptoms
+    red_flag_relevance: false
+    display_order: 40
+
+  - field_code: face_lip_tongue_swelling
+    field_label: Swelling of face, lips, or tongue
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 50
+
+  - field_code: breathing_difficulty
+    field_label: Trouble breathing or wheezing
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 60
+
+  - field_code: throat_tightness
+    field_label: Throat tightness or trouble swallowing saliva
+    data_type: boolean
+    is_required: true
+    priority_weight: 100
+    ask_group: safety
+    red_flag_relevance: true
+    display_order: 70
+
+  - field_code: vomiting_with_reaction
+    field_label: Vomiting with the reaction
+    data_type: boolean
+    is_required: true
+    priority_weight: 80
+    ask_group: symptoms
+    red_flag_relevance: true
+    display_order: 80
+
+  - field_code: epinephrine_given
+    field_label: Epinephrine auto-injector was used
+    data_type: boolean
+    is_required: false
+    priority_weight: 95
+    ask_group: action
+    red_flag_relevance: true
+    display_order: 90
+
+question_templates:
+  - question_code: ask_allergy_age
+    field_code: age_months
+    question_text: "How old is your child?"
+    expected_answer_type: integer
+    ask_order_hint: 10
+    group_key: demographics
+    variants: []
+
+  - question_code: ask_allergy_onset
+    field_code: onset_time
+    question_text: "When did this reaction start?"
+    expected_answer_type: datetime
+    ask_order_hint: 20
+    group_key: timeline
+    variants: []
+
+  - question_code: ask_allergy_trigger
+    field_code: allergy_trigger_type
+    question_text: "What do you think triggered it — food, insect sting, medicine, or something else?"
+    expected_answer_type: single_select
+    ask_order_hint: 30
+    group_key: exposure
+    variants: []
+
+  - question_code: ask_allergy_hives
+    field_code: skin_hives_rash
+    question_text: "Is there hives or a widespread rash?"
+    expected_answer_type: boolean
+    ask_order_hint: 40
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_allergy_face_swelling
+    field_code: face_lip_tongue_swelling
+    question_text: "Any swelling of the face, lips, or tongue?"
+    expected_answer_type: boolean
+    ask_order_hint: 50
+    group_key: safety
+    variants: []
+
+  - question_code: ask_allergy_breathing
+    field_code: breathing_difficulty
+    question_text: "Any trouble breathing, noisy breathing, or wheezing?"
+    expected_answer_type: boolean
+    ask_order_hint: 60
+    group_key: safety
+    variants: []
+
+  - question_code: ask_allergy_throat
+    field_code: throat_tightness
+    question_text: "Any throat tightness or trouble swallowing?"
+    expected_answer_type: boolean
+    ask_order_hint: 70
+    group_key: safety
+    variants: []
+
+  - question_code: ask_allergy_vomit
+    field_code: vomiting_with_reaction
+    question_text: "Any vomiting with this reaction?"
+    expected_answer_type: boolean
+    ask_order_hint: 80
+    group_key: symptoms
+    variants: []
+
+  - question_code: ask_allergy_epi
+    field_code: epinephrine_given
+    question_text: "Did you use an EpiPen or similar emergency shot?"
+    expected_answer_type: boolean
+    ask_order_hint: 90
+    group_key: action
+    variants: []
+
+red_flag_rules:
+  - rule_code: allergy_airway
+    description: Breathing difficulty or throat tightness after possible allergen
+    logic_json:
+      any:
+        - field: breathing_difficulty
+          op: eq
+          value: true
+        - field: throat_tightness
+          op: eq
+          value: true
+    urgency_level: emergency
+    message: "This could be a severe allergic reaction. Use epinephrine if prescribed and call emergency services now."
+
+  - rule_code: allergy_swelling_breathing
+    description: Facial swelling with breathing symptoms
+    logic_json:
+      all:
+        - field: face_lip_tongue_swelling
+          op: eq
+          value: true
+        - field: breathing_difficulty
+          op: eq
+          value: true
+    urgency_level: emergency
+    message: "Swelling with breathing problems is an emergency. Call 911 or your local emergency number now."
